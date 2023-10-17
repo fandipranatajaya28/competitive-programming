@@ -30,13 +30,14 @@ func (this *LRUCache) Get(key int) int {
 }
 
 func (this *LRUCache) Put(key int, value int) {
-	// if capacity reached
+	// if key already exist
 	if elem, ok := this.cache[key]; ok {
 		this.linklist.Remove(elem)
 		newelem := this.linklist.PushFront([]int{key, value})
 		this.cache[key] = newelem
 		return
 	}
+	// if max capacity reached
 	if len(this.cache) == this.capacity {
 		elem := this.linklist.Back()
 		v := this.linklist.Remove(elem)
