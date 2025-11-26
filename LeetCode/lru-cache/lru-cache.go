@@ -1,50 +1,79 @@
 package main
 
 import (
-	"container/list"
 	"fmt"
 )
 
 type LRUCache struct {
-	cache    map[int]*list.Element
-	linklist *list.List
-	capacity int
+	Head, Tail *Node
+	Mp         map[int]*Node
+	Capacity   int
+}
+
+func newLRUCache(head, tail *Node, cap int) LRUCache {
+	return LRUCache{
+		Head:     head,
+		Tail:     tail,
+		Mp:       make(map[int]*Node),
+		Capacity: cap,
+	}
+}
+
+type Node struct {
+	Prev, Next *Node
+	Key, Value int
+}
+
+func newNode(key, val int) *Node {
+	return &Node{
+		Key:   key,
+		Value: val,
+	}
 }
 
 func Constructor(capacity int) LRUCache {
-	return LRUCache{
-		cache:    make(map[int]*list.Element, capacity),
-		linklist: list.New(),
-		capacity: capacity,
-	}
+	head, tail := newNode(0, 0), newNode(0, 0)
+
+	head.Next = tail
+	tail.Prev = head
+	return newLRUCache(head, tail, capacity)
 }
 
-// 0 is key and 1 is value
 func (this *LRUCache) Get(key int) int {
-	if _, ok := this.cache[key]; !ok {
-		return -1
+	if n, ok := this.Mp[key]; ok {
+		this.remove(n)
+		this.insert(n)
+		return n.Value
 	}
-	elem := this.cache[key]
-	this.linklist.MoveToFront(elem)
-	return elem.Value.([]int)[1]
+
+	return -1
 }
 
 func (this *LRUCache) Put(key int, value int) {
-	// if key already exist
-	if elem, ok := this.cache[key]; ok {
-		this.linklist.Remove(elem)
-		newelem := this.linklist.PushFront([]int{key, value})
-		this.cache[key] = newelem
-		return
+	if _, ok := this.Mp[key]; ok {
+		this.remove(this.Mp[key])
 	}
-	// if max capacity reached
-	if len(this.cache) == this.capacity {
-		elem := this.linklist.Back()
-		v := this.linklist.Remove(elem)
-		delete(this.cache, v.([]int)[0])
+
+	if len(this.Mp) == this.Capacity {
+		this.remove(this.Tail.Prev)
 	}
-	newelem := this.linklist.PushFront([]int{key, value})
-	this.cache[key] = newelem
+
+	this.insert(newNode(key, value))
+}
+
+func (this *LRUCache) remove(node *Node) {
+	delete(this.Mp, node.Key)
+	node.Prev.Next = node.Next
+	node.Next.Prev = node.Prev
+}
+
+func (this *LRUCache) insert(node *Node) {
+	this.Mp[node.Key] = node
+	next := this.Head.Next
+	this.Head.Next = node
+	node.Prev = this.Head
+	next.Prev = node
+	node.Next = next
 }
 
 func main() {
@@ -53,7 +82,7 @@ func main() {
 	obj.Put(2, 1)
 	obj.Put(3, 2)
 
-	for l := obj.linklist.Front(); l != nil; l = l.Next() {
-		fmt.Println(l.Value)
+	for l := obj.Head; l != nil; l = l.Next {
+		fmt.Println(l.Key, l.Value)
 	}
 }
