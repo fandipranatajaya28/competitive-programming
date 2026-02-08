@@ -4,85 +4,97 @@ import (
 	"fmt"
 )
 
-type LRUCache struct {
-	Head, Tail *Node
-	Mp         map[int]*Node
-	Capacity   int
-}
-
-func newLRUCache(head, tail *Node, cap int) LRUCache {
-	return LRUCache{
-		Head:     head,
-		Tail:     tail,
-		Mp:       make(map[int]*Node),
-		Capacity: cap,
-	}
-}
-
 type Node struct {
-	Prev, Next *Node
-	Key, Value int
+	key, value int
+	prev, next *Node
 }
 
-func newNode(key, val int) *Node {
-	return &Node{
-		Key:   key,
-		Value: val,
-	}
+type LRUCache struct {
+	capacity int
+	cache    map[int]*Node
+	head     *Node
+	tail     *Node
 }
 
 func Constructor(capacity int) LRUCache {
-	head, tail := newNode(0, 0), newNode(0, 0)
+	// Create dummy head and tail
+	head := &Node{}
+	tail := &Node{}
+	head.next = tail
+	tail.prev = head
 
-	head.Next = tail
-	tail.Prev = head
-	return newLRUCache(head, tail, capacity)
+	return LRUCache{
+		capacity: capacity,
+		cache:    make(map[int]*Node),
+		head:     head,
+		tail:     tail,
+	}
 }
 
 func (this *LRUCache) Get(key int) int {
-	if n, ok := this.Mp[key]; ok {
-		this.remove(n)
-		this.insert(n)
-		return n.Value
+	node, isExist := this.cache[key]
+	if isExist {
+		this.moveToFront(node)
+		return node.value
 	}
-
 	return -1
 }
 
 func (this *LRUCache) Put(key int, value int) {
-	if _, ok := this.Mp[key]; ok {
-		this.remove(this.Mp[key])
+	// If key exists, update and move to front
+	if node, isExist := this.cache[key]; isExist {
+		node.value = value
+		this.moveToFront(node)
+		return
 	}
 
-	if len(this.Mp) == this.Capacity {
-		this.remove(this.Tail.Prev)
+	// If at capacity, remove least recently used
+	if len(this.cache) == this.capacity {
+		lru := this.tail.prev
+		this.removeNode(lru)
+		delete(this.cache, lru.key)
 	}
 
-	this.insert(newNode(key, value))
+	// Add new node
+	newNode := &Node{
+		key:   key,
+		value: value,
+	}
+	this.addToFront(newNode)
+	this.cache[key] = newNode
 }
 
-func (this *LRUCache) remove(node *Node) {
-	delete(this.Mp, node.Key)
-	node.Prev.Next = node.Next
-	node.Next.Prev = node.Prev
+func (this *LRUCache) moveToFront(node *Node) {
+	this.removeNode(node)
+	this.addToFront(node)
 }
 
-func (this *LRUCache) insert(node *Node) {
-	this.Mp[node.Key] = node
-	next := this.Head.Next
-	this.Head.Next = node
-	node.Prev = this.Head
-	next.Prev = node
-	node.Next = next
+func (this *LRUCache) removeNode(node *Node) {
+	node.prev.next = node.next
+	node.next.prev = node.prev
+}
+
+func (this *LRUCache) addToFront(node *Node) {
+	node.next = this.head.next
+	node.prev = this.head
+	this.head.next.prev = node
+	this.head.next = node
 }
 
 func main() {
-	obj := Constructor(3)
-	_ = obj.Get(3)
-	obj.Put(2, 1)
-	obj.Put(3, 2)
+	cache := Constructor(3)
 
-	for l := obj.Head; l != nil; l = l.Next {
-		fmt.Println(l.Key, l.Value)
-	}
+	fmt.Println(cache.Get(3)) // -1
+
+	cache.Put(2, 1)
+	cache.Put(3, 2)
+
+	fmt.Println(cache.Get(2)) // 1
+	fmt.Println(cache.Get(3)) // 2
+
+	cache.Put(4, 3)
+	cache.Put(5, 4)
+
+	fmt.Println(cache.Get(2)) // -1 (evicted)
+	fmt.Println(cache.Get(4)) // 3
 }
