@@ -3,47 +3,49 @@ package main
 import "fmt"
 
 type Trie struct {
-	isLeaf bool
-	child  map[byte]*Trie
+	child map[byte]*Trie
+	isEnd bool
 }
 
 func Constructor() Trie {
-	object := new(Trie)
-	object.child = make(map[byte]*Trie)
-	return *object
+	return Trie{
+		child: make(map[byte]*Trie),
+	}
 }
 
 func (this *Trie) Insert(word string) {
 	curr := this
-	for i := range len(word) {
-		if _, isExist := curr.child[word[i]]; !isExist {
+	for i := 0; i < len(word); i++ {
+		char := word[i]
+		if curr.child[char] == nil {
 			child := Constructor()
-			curr.child[word[i]] = &child
+			curr.child[char] = &child
 		}
-		curr = curr.child[word[i]]
+		curr = curr.child[char]
 	}
-	curr.isLeaf = true
-	return
+	curr.isEnd = true
 }
 
 func (this *Trie) Search(word string) bool {
 	curr := this
 	for i := range len(word) {
-		if _, isExist := curr.child[word[i]]; !isExist {
+		char := word[i]
+		if curr.child[char] == nil {
 			return false
 		}
-		curr = curr.child[word[i]]
+		curr = curr.child[char]
 	}
-	return curr.isLeaf
+	return curr.isEnd
 }
 
 func (this *Trie) StartsWith(prefix string) bool {
 	curr := this
 	for i := range len(prefix) {
-		if _, isExist := curr.child[prefix[i]]; !isExist {
+		char := prefix[i]
+		if curr.child[char] == nil {
 			return false
 		}
-		curr = curr.child[prefix[i]]
+		curr = curr.child[char]
 	}
 	return true
 }
@@ -73,5 +75,4 @@ func main() {
 			fmt.Println(trie.StartsWith(inputs[idx]), inputs[idx])
 		}
 	}
-
 }
